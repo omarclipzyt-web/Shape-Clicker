@@ -1,194 +1,171 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shape Clicker Galaxy</title>
-<style>
-body{margin:0;font-family:system-ui;background:radial-gradient(circle at top,#050510,#000);color:white;overflow:hidden;transition:background 2s;}
-body.galaxy{background:
-radial-gradient(circle at 30% 30%, rgba(255,0,255,0.15), transparent 40%),
-radial-gradient(circle at 70% 60%, rgba(0,150,255,0.15), transparent 45%),
-radial-gradient(circle at center, #020024, #090979, #000);}
-#top{position:fixed;top:0;width:100%;height:50px;background:rgba(0,0,0,0.6);display:flex;align-items:center;padding:0 10px;z-index:5;}
-button{margin-top:5px;padding:6px 10px;border-radius:8px;border:none;background:#222;color:white;}
-button:disabled{opacity:0.4}
-#score{flex:1;text-align:center;}
-#shop,#shapes,#leaderboard{position:fixed;top:50px;width:240px;height:calc(100%-50px);background:rgba(15,15,30,0.95);padding:10px;display:none;overflow-y:auto;z-index:5;}
-#shop{left:0;} #shapes{right:0;} #leaderboard{left:50%;transform:translateX(-50%);}
-.item{background:rgba(255,255,255,0.08);margin-bottom:10px;padding:10px;border-radius:10px;text-align:center;}
-#target{position:absolute;border-radius:50%;animation:pulse 1.5s infinite alternate;}
-@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.1)}}
-.triangle{width:0!important;height:0!important;background:none!important;border-left:50px solid transparent;border-right:50px solid transparent;border-bottom:100px solid red;}
-.heart{width:100px;height:90px;background:red;transform:rotate(-45deg);border-radius:10px 10px 0 0;position:absolute;}
-.heart::before,.heart::after{content:"";width:100px;height:90px;background:red;border-radius:50%;position:absolute;}
-.heart::before{top:-50px;left:0;} .heart::after{left:50px;top:0;}
-#teleport{position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;font-size:2em;color:#9df;z-index:10;text-shadow:0 0 20px #9df;}
-</style>
+  <meta charset="UTF-8">
+  <title>Shape Clicker</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+
+  <meta name="theme-color" content="#6a00ff">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at top, #1a002b, #000);
+      color: white;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #shape {
+      width: 140px;
+      height: 140px;
+      background: #ff00ff;
+      border-radius: 50%;
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      box-shadow: 0 0 30px #ff00ff;
+      transition: all 0.2s;
+    }
+
+    #shape.square { border-radius: 10px; }
+    #shape.triangle {
+      width: 0;
+      height: 0;
+      border-left: 70px solid transparent;
+      border-right: 70px solid transparent;
+      border-bottom: 140px solid #ff00ff;
+      background: none;
+      box-shadow: none;
+    }
+    #shape.rectangle { border-radius: 8px; }
+
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      text-align: left;
+    }
+
+    .panel {
+      background: rgba(0,0,0,0.6);
+      padding: 10px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      display: block;
+      margin: 5px 0;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: none;
+      background: #6a00ff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
+  <div id="game">
+    <div id="shape"></div>
 
-<div id="teleport">Teleporting To The Galaxy...</div>
+    <div id="ui">
+      <div class="panel">
+        <div>Points: <span id="points">0</span></div>
+      </div>
 
-<div id="top">
-<button onclick="toggle('shop')">Shop</button>
-<button onclick="toggle('shapes')">Shapes</button>
-<button onclick="toggle('leaderboard')">Leaderboard</button>
-<div id="score">Score: 0 | Streak: 0</div>
-</div>
+      <div class="panel">
+        <strong>Shapes</strong>
+        <button onclick="buyShape('circle',0)">Circle (free)</button>
+        <button id="squareBtn" onclick="buyShape('square',10)">Square (10)</button>
+        <button id="triangleBtn" onclick="buyShape('triangle',30)">Triangle (30)</button>
+        <button id="rectangleBtn" onclick="buyShape('rectangle',20)">Rectangle (20)</button>
+      </div>
 
-<div id="shop"></div>
-<div id="shapes"></div>
-<div id="leaderboard"></div>
-<div id="target"></div>
+      <div class="panel">
+        <strong>Upgrades</strong>
+        <button onclick="buyUpgrade()">+1 per click (<span id="upgradePrice">10</span>)</button>
+      </div>
+    </div>
+  </div>
 
-<script>
-let score=0,streak=0,bestScore=0,bestStreak=0;
-let baseSize=150,size=150,shrinkSpeed=0.35,shape="circle",multiplier=1;
-let galaxyUnlocked=false;
-let autoIntervals=0;
+  <script>
+    let points = 0;
+    let perClick = 1;
+    let upgradePrice = 10;
+    let currentShape = 'circle';
 
-const target=document.getElementById("target"),scoreText=document.getElementById("score"),tele=document.getElementById("teleport");
-const shopDiv=document.getElementById("shop"),shapesDiv=document.getElementById("shapes"),lbDiv=document.getElementById("leaderboard");
+    const shape = document.getElementById('shape');
+    const pointsSpan = document.getElementById('points');
+    const upgradePriceSpan = document.getElementById('upgradePrice');
 
-const shapes={circle:{price:0,owned:true},square:{price:10,owned:false},rectangle:{price:20,owned:false},triangle:{price:30,owned:false},heart:{price:50,owned:false}};
+    function updateUI() {
+      pointsSpan.textContent = points;
+      upgradePriceSpan.textContent = upgradePrice;
 
-const upgrades={
-slow:{name:"Slower Shrink",base:5,level:0},
-big:{name:"Bigger Size",base:5,level:0},
-multi:{name:"Score Multiplier",base:10,level:0},
-auto:{name:"Auto Clicker",base:15,level:0},
-shield:{name:"Streak Shield",base:10,level:0},
-glow:{name:"Glow Boost",base:10,level:0},
-diff:{name:"Slow Difficulty",base:15,level:0},
-particles:{name:"Particle Storm",base:5,level:0},
-spawn:{name:"Wide Spawn",base:5,level:0},
-bonus:{name:"Streak Bonus",base:20,level:0}
-};
+      document.getElementById('squareBtn').disabled = points < 10;
+      document.getElementById('triangleBtn').disabled = points < 30;
+      document.getElementById('rectangleBtn').disabled = points < 20;
+    }
 
-const upgradeCost = u => Math.floor(u.base * Math.pow(1.6, u.level));
+    shape.onclick = () => {
+      points += perClick;
+      updateUI();
+    };
 
-function toggle(id){
-const e=document.getElementById(id);
-e.style.display=e.style.display==="none"?"block":"none";
-}
+    function buyShape(type, cost) {
+      if (points >= cost) {
+        points -= cost;
+        currentShape = type;
+        applyShape();
+        updateUI();
+      }
+    }
 
-function update(){
-scoreText.textContent=`Score: ${score} | Streak: ${streak}`;
-bestScore=Math.max(bestScore,score);
-bestStreak=Math.max(bestStreak,streak);
-render();
-}
+    function applyShape() {
+      shape.className = '';
+      shape.style.background = '#ff00ff';
+      shape.style.borderBottomColor = '#ff00ff';
 
-function randomColor(){
-return galaxyUnlocked ? `hsl(${200+Math.random()*120},90%,65%)` : `hsl(${Math.random()*360},90%,60%)`;
-}
+      if (currentShape === 'square') shape.classList.add('square');
+      if (currentShape === 'triangle') shape.classList.add('triangle');
+      if (currentShape === 'rectangle') {
+        shape.style.width = '200px';
+        shape.style.height = '100px';
+      } else {
+        shape.style.width = '140px';
+        shape.style.height = '140px';
+      }
+    }
 
-function spawn(){
-size=baseSize;
-const c=randomColor();
-target.className="";
-target.style.background=c;
-target.style.boxShadow=`0 0 ${25+upgrades.glow.level*12}px ${c}`;
-target.style.width=size+"px";
-target.style.height=size+"px";
-target.style.borderRadius="50%";
+    function buyUpgrade() {
+      if (points >= upgradePrice) {
+        points -= upgradePrice;
+        perClick++;
+        upgradePrice = Math.floor(upgradePrice * 1.6);
+        updateUI();
+      }
+    }
 
-if(shape==="square") target.style.borderRadius="0";
-if(shape==="rectangle"){target.style.borderRadius="10px";target.style.width=size*1.6+"px";}
-if(shape==="triangle"){target.className="triangle";target.style.borderBottomColor=c;}
-if(shape==="heart"){target.className="heart";target.style.background=c;}
-
-target.style.left=Math.random()*(innerWidth-size)+"px";
-target.style.top=Math.random()*(innerHeight-size-60)+60+"px";
-}
-
-target.onclick=()=>{
-score+=multiplier + upgrades.bonus.level;
-streak++;
-shrinkSpeed+=0.01;
-checkGalaxy();
-update();
-spawn();
-};
-
-function shrink(){
-size-=shrinkSpeed;
-if(size<=0){
-if(upgrades.shield.level===0) streak=0;
-update();
-spawn();
-}else if(shape!=="triangle"){
-target.style.width=size+"px";
-target.style.height=size+"px";
-}
-}
-
-function checkGalaxy(){
-if(score>=100 && !galaxyUnlocked){
-galaxyUnlocked=true;
-document.body.classList.add("galaxy");
-tele.style.display="flex";
-setTimeout(()=>tele.style.display="none",2000);
-}
-}
-
-function buyShape(key){
-const s=shapes[key];
-if(!s.owned && score<s.price) return;
-if(!s.owned){score-=s.price; s.owned=true;}
-shape=key;
-update();
-spawn();
-}
-
-function buyUpgrade(key){
-const u=upgrades[key];
-const cost = upgradeCost(u);
-if(score < cost) return;
-score -= cost;
-u.level++;
-
-if(key==="auto"){
-autoIntervals++;
-setInterval(()=>target.click(), Math.max(800, 2500 - autoIntervals*300));
-}
-if(key==="slow") shrinkSpeed=Math.max(0.05, shrinkSpeed - 0.04);
-if(key==="big") baseSize+=10;
-if(key==="multi") multiplier++;
-update();
-}
-
-function render(){
-shopDiv.innerHTML="<h3>Upgrades</h3>";
-for(const k in upgrades){
-const u=upgrades[k];
-shopDiv.innerHTML+=`
-<div class="item">
-${u.name} (Lvl ${u.level})<br>
-<button ${score<upgradeCost(u)?"disabled":""} onclick="buyUpgrade('${k}')">Buy (${upgradeCost(u)})</button>
-</div>`;
-}
-
-shapesDiv.innerHTML="<h3>Shapes</h3>";
-for(const k in shapes){
-const s=shapes[k];
-let label=s.owned?(shape===k?"Selected":"Select"):`Buy (${s.price})`;
-shapesDiv.innerHTML+=`
-<div class="item">
-${k.charAt(0).toUpperCase()+k.slice(1)}<br>
-<button ${(!s.owned && score<s.price)?"disabled":""} onclick="buyShape('${k}')">${label}</button>
-</div>`;
-}
-
-lbDiv.innerHTML=`
-<h3>Leaderboard</h3>
-<div class="item">Best Score<br>${bestScore}</div>
-<div class="item">Best Streak<br>${bestStreak}</div>`;
-}
-
-spawn();
-update();
-setInterval(shrink,20);
-</script>
+    updateUI();
+  </script>
 </body>
 </html>
