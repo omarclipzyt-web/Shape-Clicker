@@ -1,171 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Shape Clicker</title>
+<meta charset="UTF-8">
+<title>Shape Clicker</title>
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
 
-  <meta name="theme-color" content="#6a00ff">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#6a00ff">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: radial-gradient(circle at top, #1a002b, #000);
-      color: white;
-      text-align: center;
-      overflow: hidden;
-    }
+<style>
+body {
+  margin: 0;
+  background: linear-gradient(#0b0016, #000);
+  font-family: Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
 
-    #game {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-    }
+#game {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
 
-    #shape {
-      width: 140px;
-      height: 140px;
-      background: #ff00ff;
-      border-radius: 50%;
-      position: absolute;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      cursor: pointer;
-      box-shadow: 0 0 30px #ff00ff;
-      transition: all 0.2s;
-    }
+#shape {
+  width: 150px;
+  height: 150px;
+  background: #8a2be2;
+  border-radius: 50%;
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 40px #8a2be2;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
 
-    #shape.square { border-radius: 10px; }
-    #shape.triangle {
-      width: 0;
-      height: 0;
-      border-left: 70px solid transparent;
-      border-right: 70px solid transparent;
-      border-bottom: 140px solid #ff00ff;
-      background: none;
-      box-shadow: none;
-    }
-    #shape.rectangle { border-radius: 8px; }
+#shape:active {
+  transform: translate(-50%, -50%) scale(0.9);
+}
 
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      text-align: left;
-    }
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
 
-    .panel {
-      background: rgba(0,0,0,0.6);
-      padding: 10px;
-      border-radius: 12px;
-      margin-bottom: 10px;
-    }
+.panel {
+  background: rgba(0,0,0,0.6);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
 
-    button {
-      display: block;
-      margin: 5px 0;
-      padding: 6px 10px;
-      border-radius: 8px;
-      border: none;
-      background: #6a00ff;
-      color: white;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  </style>
+button {
+  width: 160px;
+  margin-top: 5px;
+  padding: 6px;
+  border-radius: 8px;
+  border: none;
+  background: #6a00ff;
+  color: white;
+  font-size: 14px;
+}
+button:disabled { opacity: 0.4; }
+</style>
 </head>
 <body>
-  <div id="game">
-    <div id="shape"></div>
 
-    <div id="ui">
-      <div class="panel">
-        <div>Points: <span id="points">0</span></div>
-      </div>
+<div id="game">
+  <div id="shape"></div>
 
-      <div class="panel">
-        <strong>Shapes</strong>
-        <button onclick="buyShape('circle',0)">Circle (free)</button>
-        <button id="squareBtn" onclick="buyShape('square',10)">Square (10)</button>
-        <button id="triangleBtn" onclick="buyShape('triangle',30)">Triangle (30)</button>
-        <button id="rectangleBtn" onclick="buyShape('rectangle',20)">Rectangle (20)</button>
-      </div>
+  <div id="ui">
+    <div class="panel">Points: <span id="points">0</span></div>
 
-      <div class="panel">
-        <strong>Upgrades</strong>
-        <button onclick="buyUpgrade()">+1 per click (<span id="upgradePrice">10</span>)</button>
-      </div>
+    <div class="panel">
+      <b>Shapes</b><br>
+      <button onclick="buyShape('circle',0)">Circle (free)</button>
+      <button onclick="buyShape('square',10)">Square (10)</button>
+      <button onclick="buyShape('triangle',30)">Triangle (30)</button>
+      <button onclick="buyShape('rectangle',20)">Rectangle (20)</button>
+    </div>
+
+    <div class="panel">
+      <b>Upgrades</b><br>
+      <button onclick="buyUpgrade()">+1 Power (<span id="upgradePrice">10</span>)</button>
     </div>
   </div>
+</div>
 
-  <script>
-    let points = 0;
-    let perClick = 1;
-    let upgradePrice = 10;
-    let currentShape = 'circle';
+<script>
+let points = 0;
+let power = 1;
+let upgradePrice = 10;
+let currentShape = 'circle';
 
-    const shape = document.getElementById('shape');
-    const pointsSpan = document.getElementById('points');
-    const upgradePriceSpan = document.getElementById('upgradePrice');
+const shape = document.getElementById('shape');
+const pointsSpan = document.getElementById('points');
+const upgradePriceSpan = document.getElementById('upgradePrice');
 
-    function updateUI() {
-      pointsSpan.textContent = points;
-      upgradePriceSpan.textContent = upgradePrice;
+shape.onclick = () => {
+  points += power;
+  pointsSpan.textContent = points;
+};
 
-      document.getElementById('squareBtn').disabled = points < 10;
-      document.getElementById('triangleBtn').disabled = points < 30;
-      document.getElementById('rectangleBtn').disabled = points < 20;
-    }
+function buyUpgrade() {
+  if (points >= upgradePrice) {
+    points -= upgradePrice;
+    power++;
+    upgradePrice = Math.floor(upgradePrice * 1.6);
+    upgradePriceSpan.textContent = upgradePrice;
+    pointsSpan.textContent = points;
+  }
+}
 
-    shape.onclick = () => {
-      points += perClick;
-      updateUI();
-    };
+function buyShape(type, cost) {
+  if (points >= cost) {
+    points -= cost;
+    currentShape = type;
+    applyShape();
+    pointsSpan.textContent = points;
+  }
+}
 
-    function buyShape(type, cost) {
-      if (points >= cost) {
-        points -= cost;
-        currentShape = type;
-        applyShape();
-        updateUI();
-      }
-    }
+function applyShape() {
+  shape.style = "";
+  shape.className = "";
+  shape.style.background = "#8a2be2";
+  shape.style.boxShadow = "0 0 40px #8a2be2";
 
-    function applyShape() {
-      shape.className = '';
-      shape.style.background = '#ff00ff';
-      shape.style.borderBottomColor = '#ff00ff';
+  if (currentShape === "square") shape.style.borderRadius = "10px";
+  if (currentShape === "triangle") {
+    shape.style.width = "0";
+    shape.style.height = "0";
+    shape.style.borderLeft = "75px solid transparent";
+    shape.style.borderRight = "75px solid transparent";
+    shape.style.borderBottom = "150px solid #8a2be2";
+    shape.style.background = "none";
+    shape.style.boxShadow = "none";
+  }
+  if (currentShape === "rectangle") {
+    shape.style.width = "220px";
+    shape.style.height = "120px";
+    shape.style.borderRadius = "12px";
+  }
+}
+</script>
 
-      if (currentShape === 'square') shape.classList.add('square');
-      if (currentShape === 'triangle') shape.classList.add('triangle');
-      if (currentShape === 'rectangle') {
-        shape.style.width = '200px';
-        shape.style.height = '100px';
-      } else {
-        shape.style.width = '140px';
-        shape.style.height = '140px';
-      }
-    }
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
 
-    function buyUpgrade() {
-      if (points >= upgradePrice) {
-        points -= upgradePrice;
-        perClick++;
-        upgradePrice = Math.floor(upgradePrice * 1.6);
-        updateUI();
-      }
-    }
-
-    updateUI();
-  </script>
 </body>
 </html>
